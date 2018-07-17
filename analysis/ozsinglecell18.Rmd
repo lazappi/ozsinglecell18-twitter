@@ -1,5 +1,5 @@
 ---
-title: "Twitter coverage of Day 1 of the Genome Informatics conference"
+title: "Twitter coverage of the Oz Single Cells 2018 conference"
 author: "Luke Zappia"
 date: "`r Sys.time()`"
 output: 
@@ -11,7 +11,7 @@ output:
 ---
 
 ```{r knitr, include = FALSE}
-DOCNAME = "gi2017"
+DOCNAME = "ozsinglecell2018"
 knitr::opts_chunk$set(autodep        = TRUE,
                       cache          = FALSE,
                       cache.path     = paste0("cache/", DOCNAME, "/"),
@@ -36,73 +36,57 @@ library(knitr)
 library(wordcloud)
 library(tidytext)
 library(igraph)
+library(ggraph)
 ```
 
 ```{r load, include = FALSE}
 theme_set(theme_light())
 
-if (file.exists("../output/gi2017.Rds")) {
-    gi2017 <- readRDS("../output/gi2017.Rds")
+if (file.exists("../output/ozsinglecell18.Rds")) {
+    ozsinglecell18 <- readRDS("../output/ozsinglecell18.Rds")
 } else {
-    gi2017 <- search_tweets("#gi2017", 10000)
-    saveRDS(gi2017, "../output/gi2017.Rds")
+    ozsinglecell18 <- search_tweets("#ozsinglecell18", 10000)
+    saveRDS(ozsinglecell18, "../output/ozsinglecell18.Rds")
 }
 
 ```
 
 # Introduction
-An analysis of tweets from Day 1 of the Genome Informatics conference.
-`r nrow(gi2017)` tweets were collected using the `rtweet` R package:
-
-## Search all the hashtags!
-
-```{r hashtags}
-gi2017 %>% 
-  filter(is_retweet == FALSE) %>% 
-  unnest_tokens(tags, hashtags) %>% 
-  filter(!is.na(tags)) %>% 
-  count(tags) %>% 
-  arrange(desc(n)) %>% 
-  slice(1:20) %>% 
-  ggplot(aes(reorder(tags, n), n)) + 
-    geom_col(fill = "skyblue3") + 
-    coord_flip() + 
-    labs(x = "hashtag", y = "count",
-         title = "Hashtags used during Genome Informatics", 
-         subtitle = "Top 20 hashtags in non-retweets")
-```
+An analysis of tweets from the Oz Single Cells 2018 conference.
+`r nrow(ozsinglecell18)` tweets were collected using the `rtweet` R package:
 
 # Timeline
 
 ## Tweets by day
 
 ```{r tweets-by-day}
-gi2017 %>% 
-  mutate(date = as_date(created_at, tz = "US/Eastern")) %>% 
+ozsinglecell18 %>% 
+  mutate(date = as_date(created_at, tz = "Australia/Sydney")) %>% 
   count(date) %>% 
   ggplot(aes(date, n)) + geom_col(fill = "skyblue3") +  
-    labs(x = "Date", y = "Tweets", title = "#gi2017 tweets per day") + 
+    labs(x = "Date", y = "Tweets", title = "#ozsinglecell18 tweets per day") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
 ```
 
 ## Tweets by day and time
 
-Filtered for dates November 1-4, New York time.
+Filtered for dates July 16-17 2018, Sydney time.
 
 ```{r tweets-by-day-hour}
-gi2017_days <- gi2017 %>% 
-  mutate(datetime = as_datetime(created_at, tz = "US/Eastern"),
+ozsinglecell18_days <- ozsinglecell18 %>% 
+  mutate(datetime = as_datetime(created_at, tz = "Australia/Sydney"),
          hour = hour(datetime)) %>% 
   group_by(date = as_date(datetime), hour) %>% 
-  filter(date >= as_date("2017-11-01"), date <= as_date("2017-11-04"))
+  filter(date >= as_date("2018-07-16"), date <= as_date("2018-07-17"))
 
-gi2017_days %>%
+ozsinglecell18_days %>%
     summarise(count = n()) %>% 
     ggplot(aes(hour, count)) +
     geom_col(fill = "skyblue3") +
     facet_grid(strftime(date, "%b %d") ~ .) + 
-    labs(x = "Hour", y = "Tweets", title = "#gi2017 tweets by time of day") + 
+    labs(x = "Hour", y = "Tweets",
+         title = "#ozsinglecell18 tweets by time of day") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
 ```
@@ -112,7 +96,7 @@ gi2017_days %>%
 ## Top tweeters
 
 ```{r tweets-top-users}
-gi2017 %>% 
+ozsinglecell18 %>% 
   count(screen_name) %>% 
   arrange(desc(n)) %>%
   slice(1:20) %>% 
@@ -120,7 +104,7 @@ gi2017 %>%
     geom_col(fill = "skyblue3") +
     coord_flip() + 
     labs(x = "Screen Name", y = "Tweets",
-         title = "#gi2017 tweets by user",
+         title = "#ozsinglecell18 tweets by user",
          subtitle = "top 20 users") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
@@ -129,7 +113,7 @@ gi2017 %>%
 ## Top original tweeters
 
 ```{r tweets-top-users-orig}
-gi2017 %>%
+ozsinglecell18 %>%
     filter(is_retweet == FALSE) %>%
     count(screen_name) %>% 
     arrange(desc(n)) %>%
@@ -138,7 +122,7 @@ gi2017 %>%
         geom_col(fill = "skyblue3") +
         coord_flip() + 
         labs(x = "Screen Name", y = "Tweets",
-             title = "#gi2017 tweets by user",
+             title = "#ozsinglecell18 tweets by user",
              subtitle = "top 20 users (no retweets)") + 
         theme(axis.text = element_text(size = 12),
               axis.title = element_text(size = 12))
@@ -149,8 +133,8 @@ gi2017 %>%
 ### Day 1
 
 ```{r tweets-top-users-day1}
-gi2017_days %>% 
-    filter(date == as_date("2017-11-01")) %>%
+ozsinglecell18_days %>% 
+    filter(date == as_date("2018-07-16")) %>%
     ungroup() %>%
     count(screen_name) %>% 
     arrange(desc(n)) %>%
@@ -159,7 +143,7 @@ gi2017_days %>%
         geom_col(fill = "skyblue3") +
         coord_flip() +
         labs(x = "Screen Name", y = "Tweets",
-             title = "#gi2017 tweets by user, Day 1",
+             title = "#ozsinglecell18 tweets by user, Day 1",
              subtitle = "top 20 users") + 
         theme(axis.text = element_text(size = 12),
               axis.title = element_text(size = 12))
@@ -168,8 +152,8 @@ gi2017_days %>%
 ### Day 1 (no retweets)
 
 ```{r tweets-top-users-day1-orig}
-gi2017_days %>% 
-    filter(date == as_date("2017-11-01")) %>%
+ozsinglecell18_days %>% 
+    filter(date == as_date("2018-07-16")) %>%
     ungroup() %>%
     filter(is_retweet == FALSE) %>%
     count(screen_name) %>% 
@@ -179,7 +163,7 @@ gi2017_days %>%
         geom_col(fill = "skyblue3") +
         coord_flip() +
         labs(x = "Screen Name", y = "Tweets",
-             title = "#gi2017 tweets by user, Day 1",
+             title = "#ozsinglecell18 tweets by user, Day 1",
              subtitle = "top 20 users, no retweets") + 
         theme(axis.text = element_text(size = 12),
               axis.title = element_text(size = 12))
@@ -188,8 +172,8 @@ gi2017_days %>%
 ### Day 2
 
 ```{r tweets-top-users-day2}
-gi2017_days %>% 
-    filter(date == as_date("2017-11-02")) %>%
+ozsinglecell18_days %>% 
+    filter(date == as_date("2018-07-17")) %>%
     ungroup() %>%
     count(screen_name) %>% 
     arrange(desc(n)) %>%
@@ -198,7 +182,7 @@ gi2017_days %>%
         geom_col(fill = "skyblue3") +
         coord_flip() +
         labs(x = "Screen Name", y = "Tweets",
-             title = "#gi2017 tweets by user, Day 2",
+             title = "#ozsinglecell18 tweets by user, Day 2",
              subtitle = "top 20 users") + 
         theme(axis.text = element_text(size = 12),
               axis.title = element_text(size = 12))
@@ -207,8 +191,8 @@ gi2017_days %>%
 ### Day 2 (no retweets)
 
 ```{r tweets-top-users-day2-orig}
-gi2017_days %>% 
-    filter(date == as_date("2017-11-02")) %>%
+ozsinglecell18_days %>% 
+    filter(date == as_date("2018-07-17")) %>%
     ungroup() %>%
     filter(is_retweet == FALSE) %>%
     count(screen_name) %>% 
@@ -218,85 +202,7 @@ gi2017_days %>%
         geom_col(fill = "skyblue3") +
         coord_flip() +
         labs(x = "Screen Name", y = "Tweets",
-             title = "#gi2017 tweets by user, Day 2",
-             subtitle = "top 20 users, no retweets") + 
-        theme(axis.text = element_text(size = 12),
-              axis.title = element_text(size = 12))
-```
-
-### Day 3
-
-```{r tweets-top-users-day3}
-gi2017_days %>% 
-    filter(date == as_date("2017-11-03")) %>%
-    ungroup() %>%
-    count(screen_name) %>% 
-    arrange(desc(n)) %>%
-    slice(1:20) %>% 
-    ggplot(aes(reorder(screen_name, n), n)) +
-        geom_col(fill = "skyblue3") +
-        coord_flip() +
-        labs(x = "Screen Name", y = "Tweets",
-             title = "#gi2017 tweets by user, Day 3",
-             subtitle = "top 20 users") + 
-        theme(axis.text = element_text(size = 12),
-              axis.title = element_text(size = 12))
-```
-
-### Day 3 (no retweets)
-
-```{r tweets-top-users-day3-orig}
-gi2017_days %>% 
-    filter(date == as_date("2017-11-03")) %>%
-    ungroup() %>%
-    filter(is_retweet == FALSE) %>%
-    count(screen_name) %>% 
-    arrange(desc(n)) %>%
-    slice(1:20) %>% 
-    ggplot(aes(reorder(screen_name, n), n)) +
-        geom_col(fill = "skyblue3") +
-        coord_flip() +
-        labs(x = "Screen Name", y = "Tweets",
-             title = "#gi2017 tweets by user, Day 3",
-             subtitle = "top 20 users, no retweets") + 
-        theme(axis.text = element_text(size = 12),
-              axis.title = element_text(size = 12))
-```
-
-### Day 4
-
-```{r tweets-top-users-day4}
-gi2017_days %>% 
-    filter(date == as_date("2017-11-04")) %>%
-    ungroup() %>%
-    count(screen_name) %>% 
-    arrange(desc(n)) %>%
-    slice(1:20) %>% 
-    ggplot(aes(reorder(screen_name, n), n)) +
-        geom_col(fill = "skyblue3") +
-        coord_flip() +
-        labs(x = "Screen Name", y = "Tweets",
-             title = "#gi2017 tweets by user, Day 4",
-             subtitle = "top 20 users") + 
-        theme(axis.text = element_text(size = 12),
-              axis.title = element_text(size = 12))
-```
-
-### Day 4 (no retweets)
-
-```{r tweets-top-users-day4-orig}
-gi2017_days %>% 
-    filter(date == as_date("2017-11-04")) %>%
-    ungroup() %>%
-    filter(is_retweet == FALSE) %>%
-    count(screen_name) %>% 
-    arrange(desc(n)) %>%
-    slice(1:20) %>% 
-    ggplot(aes(reorder(screen_name, n), n)) +
-        geom_col(fill = "skyblue3") +
-        coord_flip() +
-        labs(x = "Screen Name", y = "Tweets",
-             title = "#gi2017 tweets by user, Day 4",
+             title = "#ozsinglecell18 tweets by user, Day 2",
              subtitle = "top 20 users, no retweets") + 
         theme(axis.text = element_text(size = 12),
               axis.title = element_text(size = 12))
@@ -305,7 +211,7 @@ gi2017_days %>%
 ## Sources
 
 ```{r tweets-top-sources}
-gi2017 %>% 
+ozsinglecell18 %>% 
   distinct(screen_name, source) %>%
   count(source) %>% 
   filter(n >= 5) %>% 
@@ -313,7 +219,7 @@ gi2017 %>%
     geom_col(fill = "skyblue3") +
     coord_flip() + 
     labs(x = "Source", y = "Tweets",
-         title = "#gi2017 tweets by source",
+         title = "#ozsinglecell18 tweets by source",
          subtitle = "distinct(screen_name, source) with >= 5 tweets") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
@@ -326,57 +232,75 @@ gi2017 %>%
 The "replies network", composed from users who reply directly to one another, 
 coloured by page rank.
 
-Better to view the original PNG file in the `output` directory.
-
-```{r reply-network, eval=FALSE}
-gi2017_replies <- gi2017 %>% 
-  filter(!is.na(in_reply_to_status_screen_name)) %>% 
-  select(screen_name, in_reply_to_status_screen_name) %>% 
+```{r reply-network}
+ozsinglecell18_replies <- ozsinglecell18 %>% 
+  filter(!is.na(reply_to_screen_name)) %>% 
+  select(screen_name, reply_to_screen_name) %>% 
   graph.data.frame(directed = TRUE)
 
-V(gi2017_replies)$label <- V(gi2017_replies)$name
-V(gi2017_replies)$id    <- V(gi2017_replies)$name
+V(ozsinglecell18_replies)$label <- V(ozsinglecell18_replies)$name
+V(ozsinglecell18_replies)$id    <- V(ozsinglecell18_replies)$name
+V(ozsinglecell18_replies)$pr    <- page_rank(ozsinglecell18_replies)$vector
 
-write_graph(gi2017_replies, file = "../output/gi2017_replies.graphml",
-            format = "graphml")
+ggraph(ozsinglecell18_replies, layout = "fr") +
+    geom_edge_link(arrow = arrow(length = unit(4, 'mm')), 
+                   end_cap = circle(1, 'mm'),
+                   colour = "darkgrey") +
+    geom_node_point(aes(colour = pr)) +
+    geom_node_text(aes(label = label), colour = "skyblue", repel = TRUE) +
+    viridis::scale_colour_viridis() +
+    theme_graph() +
+    theme(legend.position = "none")
 ```
 
-<!--![](../output/gi2017_replies.png)-->
+<!--![](../output/ozsinglecell18_replies.png)-->
 
 ## Mentions
 
 The "mentions network", where users mention other users in their tweets.
-Filtered for k-core >= 4 and coloured by modularity class.
 
-Better to view the original PNG file in the `output` directory.
-
-```{r mentions-network, eval=FALSE}
-gi2017_mentions <- gi2017 %>% 
+```{r mentions-network}
+ozsinglecell18_mentions <- ozsinglecell18 %>% 
   filter(!is.na(mentions_screen_name)) %>% 
   select(screen_name, mentions_screen_name) %>% 
+  unnest(mentions_screen_name) %>% 
   mutate(mentions_screen_name = strsplit(mentions_screen_name, " ")) %>% 
   unnest(mentions_screen_name) %>% 
   graph.data.frame()
 
-V(gi2017_mentions)$label <- V(gi2017_mentions)$name
-V(gi2017_mentions)$id    <- V(gi2017_mentions)$name
+V(ozsinglecell18_mentions)$label <- V(ozsinglecell18_mentions)$name
+V(ozsinglecell18_mentions)$id    <- V(ozsinglecell18_mentions)$name
+V(ozsinglecell18_mentions)$pr    <- page_rank(ozsinglecell18_mentions)$vector
+V(ozsinglecell18_mentions)$kcore <- coreness(ozsinglecell18_mentions)
 
-write_graph(gi2017_mentions, file = "../output/gi2017_mentions.graphml",
-            format = "graphml")
+lo_kcore <- V(ozsinglecell18_mentions)$kcore < 3
+
+ozsinglecell18_mentions <- delete_vertices(ozsinglecell18_mentions,
+                                           V(ozsinglecell18_mentions)[lo_kcore])
+
+ggraph(ozsinglecell18_mentions, layout = "fr") +
+    geom_edge_link(arrow = arrow(length = unit(2, 'mm')), 
+                   end_cap = circle(1, 'mm'),
+                   width = 0.1, colour = "darkgrey") +
+    geom_node_point(aes(colour = pr)) +
+    geom_node_text(aes(label = label, size = pr), colour = "blue") +
+    viridis::scale_colour_viridis() +
+    theme_graph() +
+    theme(legend.position = "none")
 ```
 
-<!--![](../output/gi2017_mentions.png)-->
+<!--![](../output/ozsinglecell18_mentions.png)-->
 
 # Retweets
 
 ## Retweet proportion
 
 ```{r is-retweet}
-gi2017 %>% 
+ozsinglecell18 %>% 
   count(is_retweet) %>% 
   ggplot(aes(is_retweet, n)) + geom_col(fill = "skyblue3") + 
     labs(x = "Is retweet", y = "Tweets",
-         title = "#gi2017 tweets by retweet status") + 
+         title = "#ozsinglecell18 tweets by retweet status") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
 ```
@@ -384,11 +308,11 @@ gi2017 %>%
 ## Retweet count
 
 ```{r retweet-count}
-gi2017 %>% 
+ozsinglecell18 %>% 
   ggplot(aes(retweet_count)) +
-    geom_histogram(bins = max(gi2017$retweet_count), fill = "skyblue3") +
+    geom_histogram(bins = max(ozsinglecell18$retweet_count), fill = "skyblue3") +
     labs(x = "Retweet count", y = "Tweets",
-         title = "#gi2017 distribution of retweets per tweet") + 
+         title = "#ozsinglecell18 distribution of retweets per tweet") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
 ```
@@ -396,7 +320,7 @@ gi2017 %>%
 ## Top retweets
 
 ```{r most-retweeted}
-gi2017 %>% 
+ozsinglecell18 %>% 
   filter(is.na(retweet_status_id)) %>% 
   select(screen_name, text, retweet_count) %>% 
   arrange(desc(retweet_count)) %>% 
@@ -410,12 +334,12 @@ gi2017 %>%
 ## Favourite proportion
 
 ```{r has-favorite}
-gi2017 %>% 
+ozsinglecell18 %>% 
   mutate(has_favorite = ifelse(favorite_count > 0, TRUE, FALSE)) %>% 
   count(has_favorite) %>%
   ggplot(aes(has_favorite, n)) + geom_col(fill = "skyblue3") + 
     labs(x = "Has favorite", y = "Tweets",
-         title = "#gi2017 tweets by favorited status") + 
+         title = "#ozsinglecell18 tweets by favorited status") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
 ```
@@ -423,11 +347,11 @@ gi2017 %>%
 ## Favourite count
 
 ```{r favorite-count}
-gi2017 %>% 
+ozsinglecell18 %>% 
   ggplot(aes(favorite_count)) +
-    geom_histogram(bins = max(gi2017$favorite_count), fill = "skyblue3") +
+    geom_histogram(bins = max(ozsinglecell18$favorite_count), fill = "skyblue3") +
     labs(x = "Favorite count", y = "Tweets",
-         title = "#gi2017 distribution of favorites per tweet") + 
+         title = "#ozsinglecell18 distribution of favorites per tweet") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
 ```
@@ -435,7 +359,7 @@ gi2017 %>%
 ## Top favourites
 
 ```{r most-favorited}
-gi2017 %>% 
+ozsinglecell18 %>% 
   select(screen_name, text, favorite_count) %>% 
   arrange(desc(favorite_count)) %>% 
   distinct() %>%
@@ -448,12 +372,12 @@ gi2017 %>%
 ## Quote proportion
 
 ```{r is-quote}
-gi2017 %>% 
-  count(is_quote_status) %>% 
-  ggplot(aes(is_quote_status, n)) +
+ozsinglecell18 %>% 
+  count(is_quote) %>% 
+  ggplot(aes(is_quote, n)) +
     geom_col(fill = "skyblue3") + 
     labs(x = "Is quote", y = "Tweets",
-         title = "#gi2017 tweets by quote status") + 
+         title = "#ozsinglecell18 tweets by quote status") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
 ```
@@ -461,12 +385,12 @@ gi2017 %>%
 ## Quote count
 
 ```{r quotes-count}
-gi2017 %>% 
-  filter(!is.na(quote_status_id)) %>% 
-  count(quote_status_id) %>% 
+ozsinglecell18 %>% 
+  filter(!is.na(quoted_status_id)) %>% 
+  count(quoted_status_id) %>% 
   ggplot(aes(n)) + geom_histogram(bins = 10, fill = "skyblue3") +
     labs(x = "Quote count", y = "Tweets",
-         title = "#gi2017 distribution of quotes per tweet") + 
+         title = "#ozsinglecell18 distribution of quotes per tweet") + 
     scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 2)) + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
@@ -475,13 +399,13 @@ gi2017 %>%
 ## Top quotes
 
 ```{r most-quoted}
-gi2017 %>% 
-  filter(!is.na(quote_status_id)) %>% 
-  count(quote_status_id) %>% 
+ozsinglecell18 %>% 
+  filter(!is.na(quoted_status_id)) %>% 
+  count(quoted_status_id) %>% 
   filter(n > 1) %>% 
   arrange(desc(n)) %>% 
 #  slice(1:10) %>% 
-  inner_join(select(gi2017, screen_name, quote_status_id,
+  inner_join(select(ozsinglecell18, screen_name, quoted_status_id,
                     is_retweet, text)) %>% 
   filter(is_retweet == FALSE) %>% 
   select(screen_name, text, quote_count = n) %>%
@@ -495,13 +419,13 @@ gi2017 %>%
 ## Media count
 
 ```{r has-media}
-gi2017 %>% 
-  mutate(has_media = !is.na(media_id)) %>% 
+ozsinglecell18 %>% 
+  mutate(has_media = !is.na(media_url)) %>% 
   count(has_media) %>% 
   ggplot(aes(has_media, n)) +
     geom_col(fill = "skyblue3") + 
     labs(x = "Has media", y = "Tweets",
-         title = "#gi2017 tweets by media status") + 
+         title = "#ozsinglecell18 tweets by media status") + 
     theme(axis.text = element_text(size = 12),
           axis.title = element_text(size = 12))
 ```
@@ -509,12 +433,12 @@ gi2017 %>%
 ## Top media
 
 ```{r liked-media}
-gi2017_media <- gi2017 %>% 
-  filter(!is.na(media_id)) %>% 
+ozsinglecell18_media <- ozsinglecell18 %>% 
+  filter(!is.na(media_url)) %>% 
   arrange(desc(favorite_count)) %>%
   filter(favorite_count > 0)
 
-gi2017_media %>%
+ozsinglecell18_media %>%
   slice(1:10) %>% 
   select(screen_name, text, favorite_count) %>%
   kable(format = "html")
@@ -522,7 +446,7 @@ gi2017_media %>%
 
 ### Most liked media image
 
-![](`r gi2017_media[1, "media_url"]`)
+![](`r ozsinglecell18_media[1, "media_url"]`)
 
 # Tweet text
 
@@ -531,12 +455,12 @@ The top 100 words used 3 or more times.
 ```{r count-words}
 data("stop_words")
 
-gi2017 %>% 
+ozsinglecell18 %>% 
   filter(is_retweet == FALSE) %>% 
   unnest_tokens(word, text) %>% 
   select(word) %>% 
-  filter(!word %in% c("gi2017", "https", "t.co", "amp"),
-         !word %in% tolower(gi2017$screen_name), 
+  filter(!word %in% c("ozsinglecell18", "https", "t.co", "amp"),
+         !word %in% tolower(ozsinglecell18$screen_name), 
          !grepl("^\\d+$", word)) %>% 
   anti_join(stop_words) %>% 
   count(word) %>% 
